@@ -1,6 +1,6 @@
 *:********************************************************************
 *:
-*:	Procedure file: bear2.prg
+*:	Procedure file: bear2m.prg
 *:	Contents:
 *:		Class		Bear AS Session
 *:		Method:	Init(lcFileName)
@@ -26,7 +26,7 @@
 *:		Method:	B2C(m.Val)
 *:		Method:	FindFile(lcFile)
 *:
-*: Piva BEAR v.200 format 23.04.2006 15:16:21
+*: Piva BEAR v.200 format 23.04.2006 16:06:45
 *:********************************************************************
 *
 * Новый Bear
@@ -39,7 +39,9 @@
 *
 
 #Define CR					Chr(13)
+#Define LF				  Chr(10)												&& ssa &&
 #Define CRLF				Chr(13)+Chr(10)
+
 #Define WORD_BREAK			" ()[]"+Chr(9)
 #Define NOTE_MARK			"*:"
 #Define INLINE_COMMENT		Chr(38)+Chr(38)
@@ -52,14 +54,15 @@
 #Define ENV_TABWIDTH	21
 #Define ENV_KIND		25
 
+#Define MAX_INSERT 2^19
 
 #Define c_Message	.T.
 #Define CONTENTS	.F.
 
 Lparameters  m.InFile, m.options
 
-Local o
-o=Createobject("Bear")
+Local o As Bear Of bear2.prg
+o=Createobject("Bear", m.InFile)
 If Vartype(o)='O'
 	With o
 		If Pcount()=2 And Vartype(m.options)='C' And Len(m.options)=36
@@ -129,7 +132,7 @@ Define Class Bear As Session
 	FormatClasses=.T.																&& Дописываает закоголовка файлов
 	FormatFile=.T.																	&& Дописывает заголовок файла
 	
-	MyIndent=.T.																		&& Моя систтема отступов
+	MyIndent=.T.																		&& Моя система отступов
 	* - можно отключить - если использется только режим Beautify
 	
 	* Опции Beautify.APP
@@ -149,19 +152,20 @@ Define Class Bear As Session
 	
 	OptionSymbols=3
 	
-	
 	* 1 - Tab
 	* 2 - Spaces
 	* 3 - NoChange
 	
-	OptionIndent=1
+	OptionIndent = 1
 	
-	OptionSpaces=4
+	OptionSpaces = 1 && 4
+	
+	OptionExpandKeywords = .T.
 	
 	OptionCommentIndent=.F.
 	OptionLineIndent=.F.
 	OptionExtraProcedures=.F.
-	OptionExtraDoCase=.F.
+	OptionExtraDoCase=.T.
 	
 	Dimension aString[1], aHeader[1]
 	
@@ -173,12 +177,12 @@ Define Class Bear As Session
 	Procedure Init(lcFileName)
 	With This
 		Sys(3056)
-		If Not .LoadFiles()
+		If Not .LoadFiles() Or Not .LoadStrings(lcFileName)	&& ssa && два условия с одинаковым результатом
 			Return .F.
 		Endif
-		If Not .LoadStrings(lcFileName)
-			Return .F.
-		Endif
+		*ssa*			If Not .LoadStrings(lcFileName)
+		*ssa*				Return .F.
+		*ssa*			Endif
 	Endwith
 	
 	*:********************************************************************
@@ -200,16 +204,22 @@ Define Class Bear As Session
 	*:
 	*:********************************************************************
 	Procedure LoadFiles
-	With This
-		.FoxTools=.FindFile("FoxTools.FLL")
-		If Empty(.FoxTools)
-			Return .F.
-		Endif
-		.DetachFoxTools=Not "FOXTOOLS.FLL" $ Set('library')
-		If .DetachFoxTools
-			Set Library To (.FoxTools) Additive
-		Endif
-	Endwith
+	*ssa*		With This
+	*ssa*			.FoxTools=.FindFile("FoxTools.FLL")
+	*ssa*			If Empty(.FoxTools)
+	*ssa*				Return .F.
+	*ssa*			Endif
+	*ssa*			.DetachFoxTools=Not "FOXTOOLS.FLL" $ Set('library')
+	*ssa*			If .DetachFoxTools
+	*ssa*				Set Library To (.FoxTools) Additive
+	*ssa*			Endif
+	*ssa*		Endwith
+	Set Library To Sys(2004)+'FoxTools' Additive
+	If "FOXTOOLS.FLL" $ Set('library')
+		.DetachFoxTools = .T.
+		.Foxtools = Sys(2004)+'FOXTOOLS.FLL'
+	Endif
+	Return .DetachFoxTools
 	
 	*:********************************************************************
 	*:
@@ -289,23 +299,26 @@ Define Class Bear As Session
 				Loop
 			Endif
 			* Обкусаем начальные TAB'ы
-			Do While Left(Alltrim(lcStr),1)=Tab
-				lcStr=Substr(lcStr,2)
-			Enddo
-			* И конечные тоже
-			Do While Right(Alltrim(lcStr),1)=Tab
-				lcStr=Substr(lcStr,1,Len(lcStr)-1)
-			Enddo
+			*ssa*				Do While Left(Alltrim(lcStr),1)=Tab
+			*ssa*					lcStr=Substr(lcStr,2)
+			*ssa*				Enddo
+			*ssa*				* И конечные тоже
+			*ssa*				Do While Right(Alltrim(lcStr),1)=Tab
+			*ssa*					lcStr=Substr(lcStr,1,Len(lcStr)-1)
+			*ssa*				Enddo
+			lcStr = Alltrim(lcStr, Tab)									&& ssa  && если надо и пробелы убрать, то добавить третий параметр ' ' (то бишь пробел :) )
 			
-			Dimension laWord[GetWordCount(lcStr,WORD_BREAK)]
-			For lnWord=1 To Alen(laWord)
-				laWord[lnWord]=Getwordnum(lcStr,lnWord,WORD_BREAK)
-			Next
+			*ssa*				Dimension laWord[GetWordCount(lcStr,WORD_BREAK)]
+			*ssa*				For lnWord=1 To Alen(laWord)
+			*ssa*					laWord[lnWord]=Getwordnum(lcStr,lnWord,WORD_BREAK)
+			*ssa*				Next
+			Alines(laWord, lcStr, 1+8, ' ')							&&WORD_BREAK может глянуть в эту сторону?
 			
+																									&& ssa &&  а может прицепить сюда FDKEYWRD.DBF?
 			
 			If 	.FormatClasses ;
-				and .CheckWord(laWord[1],'Define',4) ;
-				and .CheckWord(laWord[2],'Class',4)
+				and .CheckWord(laWord[1],'DEFINE',4) ;
+				and .CheckWord(laWord[2],'CLASS',4)
 				
 				.CurrentClass=laWord[3]
 				
@@ -319,38 +332,40 @@ Define Class Bear As Session
 			Endif
 			
 			If .FormatProcedures ;
-				and .CheckWord(laWord[1],"Protected",4) ;
-				or .CheckWord(laWord[1],"Hidden",4)
+				and .CheckWord(laWord[1],"PROTECTED",4) ;
+				or .CheckWord(laWord[1],"HIDDEN",4)
 				
-				If .CheckWord(laWord[2],"Procedure",4) ;
-					or .CheckWord(laWord[2],"Function",4) ;
+				If .CheckWord(laWord[2],"PROCEDURE",4) ;
+					or .CheckWord(laWord[2],"FUNCTION",4) ;
 					
 					.Level=0
-					.ProcHeader(laWord[3],Atc(laWord[3],"Function"))
+					.ProcHeader(laWord[3],Atc(laWord[3],"FUNCTION"))
 					.NextLevel=0
 					
 				Endif
 			Endif
 			
 			If .FormatProcedures ;
-				and .CheckWord(laWord[1],"Procedure",4) ;
-				or .CheckWord(laWord[1],"Function",4) ;
+				and .CheckWord(laWord[1],"PROCEDURE",4) ;
+				or .CheckWord(laWord[1],"FUNCTION",4) ;
 				
 				.Level=0
-				.ProcHeader(laWord[2],Atc(laWord[2],"Function"))
+				*ssa*					.ProcHeader(laWord[2],Atc(laWord[2],"Function"))
+				.ProcHeader(laWord[2], Atc("FUNCTION", laWord[1]))
 				.NextLevel=0
 				
-			Endif
-			
-			If Not .MyIndent
-				=Put(.aString[lnCount])
-				Loop
 			Endif
 			
 			If (.FormatProcedures ;
 				or .FormatClasses ;
 				or .FormatFile ) ;
 				and laWord[1]=NOTE_MARK
+				Loop
+			Endif
+			
+			If Not .MyIndent
+				*ssa*					=Put(.aString[lnCount])
+				.Put(.aString[lnCount])										&& ssa && сразу видно, что при .MyIndent=.f. тестов не было :)
 				Loop
 			Endif
 			
@@ -361,7 +376,7 @@ Define Class Bear As Session
 				Loop
 			Endif
 			
-			If 	.CheckWord(laWord[1],'EndDefine',4)
+			If 	.CheckWord(laWord[1],'ENDDEFINE',4)
 				.CurrentClass=""
 				.BaseLevel=0
 				.Level=0
@@ -406,7 +421,7 @@ Define Class Bear As Session
 				or .CheckWord(laWord[1],'ENDWITH'	,4) ;
 				or .CheckWord(laWord[1],'NEXT'		,4) ;
 				or .CheckWord(laWord[1],'#ENDIF'	,4) ;
-				
+				or .CheckWord(laWord[1],'ENDSCAN'	,4)			&& ssa && + просто забытая строка :)
 				
 				.Level=.Level-1
 				.NextLevel=.NextLevel-1
@@ -422,7 +437,7 @@ Define Class Bear As Session
 			Endif
 			
 			If Atc(INLINE_COMMENT,lcStr)>0
-				lcStr=Replicate(Tab,.BaseLevel+.Level)+lcStr
+				lcStr=Replicate(Tab,Max(.BaseLevel+.Level,0))+lcStr
 				lcStr=.InLine(lcStr)
 				.Source=.Source+lcStr+CRLF
 			Else
@@ -452,9 +467,10 @@ Define Class Bear As Session
 	*:
 	*:********************************************************************
 	Procedure CheckWord(lcWord,lcTemplate,lnWordLen)
-	With This
-		Return Atc(lcWord,lcTemplate)=1 And Len(lcWord)>=lnWordLen
-	Endwith
+	*ssa*		With This
+	*ssa*			Return Atc(lcWord,lcTemplate)=1 And Len(lcWord)>=lnWordLen
+	Return lcTemplate=Upper(lcWord)									&& ssa && Atc(lcTemplate, lcWord)=1 And Len(lcWord)>=lnWordLen
+	*ssa*		Endwith
 	
 	
 	*:********************************************************************
@@ -464,7 +480,7 @@ Define Class Bear As Session
 	*:********************************************************************
 	Procedure Put(lcStr)
 	With This
-		.Source=.Source+Replicate(Tab,.BaseLevel+.Level)+Iif(Empty(lcStr),"",lcStr)+CRLF
+		.Source=.Source+Replicate(Tab,Max(.BaseLevel+.Level, 0))+Iif(Empty(lcStr),"",lcStr)+CRLF
 	Endwith
 	
 	*:********************************************************************
@@ -504,7 +520,16 @@ Define Class Bear As Session
 			_EdUndoOn(.WHandle,.T.)											&& Включиди режим UNDO для 1 изменеия теска
 			_EdSelect(.WHandle,0,.FileSize)							&& Выбрали весть текст
 			_EdDelete(.WHandle)													&& Все удалили
-			_EdInsert(.WHandle,.Source,Len(.Source))		&& Вствили отформатированыый текст
+*ssa*	  при обработке больших файлов вылезло ограничение на размер вставляемого блока.
+*ssa*	  пришлось лепить вставку частями
+			If Len(.Source) > MAX_INSERT
+				For i=1 to Int(Len(.Source)/MAX_INSERT)
+					_EdInsert(.WHandle, Substr(.Source, (i-1)*MAX_INSERT+1, MAX_INSERT), MAX_INSERT)
+				Next
+				_EdInsert(.WHandle,Right(.Source,Len(.Source)%MAX_INSERT), Len(.Source)%MAX_INSERT)
+			Else 
+				_EdInsert(.WHandle,.Source,Len(.Source))		&& Вствили отформатированыый текст
+			EndIf
 			_EdUndoOn(.WHandle,.F.)											&& Выключили UNDO
 			_EdSetPos(.WHandle,.Position)								&& Встали на позицию
 			_EdStoPos(.WHandle,.Position,.T.)						&& Передвинули указатель на эту позицию
@@ -513,8 +538,7 @@ Define Class Bear As Session
 			Strtofile(.Source,.FileName,0)
 		Endif
 	Endwith
-	
-	
+		
 	*:********************************************************************
 	*:
 	*:	Method:	FileHeader of class Bear
@@ -548,7 +572,7 @@ Define Class Bear As Session
 	With This
 		If .Kind=1
 			.PutE(NOTE_MARK+" End of : "+.FileName)
-		Else
+			*ssa*			Else
 			
 		Endif
 	Endwith
@@ -622,13 +646,13 @@ Define Class Bear As Session
 	Procedure InLine(lcStr)
 	With This
 		* Если комментарий уже вставлен
-		If Chr(38)+Chr(38) $ lcStr
+		If INLINE_COMMENT $ lcStr										&& ssa  && ? наверху есть #Define INLINE_COMMENT		Chr(38)+Chr(38)
 			Local lnCommentPos, lcSuffix
-			lnCommentPos=At(INLINE_COMMENT,lcStr)
-			lcSuffix=.RightTrim(Substr(lcStr,lnCommentPos))
-			lcStr=.RightTrim(Substr(lcStr,1,lnCommentPos-1))
+			lnCommentPos = At(INLINE_COMMENT,lcStr)				&& ssa &&  тем более, что здесь он вспомнился :)
+			lcSuffix = .RightTrim(Substr(lcStr,lnCommentPos))
+			lcStr = .RightTrim(Left(lcStr, lnCommentPos-1))	&& ssa &&  Substr(lcStr,1,lnCommentPos-1)) на left()
 			If Not Empty(lcSuffix)
-				lcStr=.AdjustString(lcStr)+lcSuffix
+				lcStr = .AdjustString(lcStr)+lcSuffix
 			Endif
 		Endif
 		Return lcStr
@@ -641,18 +665,19 @@ Define Class Bear As Session
 	*:********************************************************************
 	Procedure RightTrim(m.cString)
 	* Remove all trailing spaces and tabs and whitespace
-	Local i,c
-	c=m.cString
-	For i=Len(m.cString) To 1 Step -1
-		If Inlist(Asc(Substr(m.c,i-1,1)),32,9,160)
-			m.c=Substr(m.c,1,i-1)
-		Else
-			Exit
-		Endif
-	Next
-	m.c=Strtran(m.c,Chr(13),"")
-	m.c=Strtran(m.c,Chr(10),"")
-	Return m.c
+	*ssa*		Local i,c
+	*ssa*		c=m.cString
+	*ssa*		For i=Len(m.cString) To 1 Step -1
+	*ssa*			If Inlist(Asc(Substr(m.c,i-1,1)),32,9,160)
+	*ssa*				m.c=Substr(m.c,1,i-1)
+	*ssa*			Else
+	*ssa*				Exit
+	*ssa*			Endif
+	*ssa*		Next
+	*ssa*		m.c=Strtran(m.c,Chr(13),"")
+	*ssa*		m.c=Strtran(m.c,Chr(10),"")
+	*ssa*		Return m.c
+	Return Rtrim(m.cString, CR, LF, Chr(32), Tab, Chr(160))	&&  ssa &&  Тут очень просятся DEFINE для указанных символов
 	
 	*:********************************************************************
 	*:
@@ -662,25 +687,26 @@ Define Class Bear As Session
 	Procedure AdjustString(m.cString)
 	* Выравнивание строки до позиции вставки комментария
 	Local i, m.pos
-	m.pos=0
+	m.pos = 0
 	For i=1 To Len(m.cString)
-		If Substr(m.cString,i,1)=Tab
-			m.pos=Int((m.pos-1+.TabWidth)/.TabWidth)*.TabWidth+1
-		Else
-			m.pos = m.pos + 1
-		Endif
+		*ssa*			If Substr(m.cString,i,1)=Tab
+		*ssa*				m.pos=Int((m.pos-1+.TabWidth)/.TabWidth)*.TabWidth+1
+		*ssa*			Else
+		*ssa*				m.pos = m.pos + 1
+		*ssa*			EndIf
+		m.pos = Iif(Substr(m.cString,i,1)=Tab, Int((m.pos-1+.TabWidth)/.TabWidth)*.TabWidth+1, m.pos + 1)	&& ssa && замена if на iif
 	Next
 	If m.pos < .TabStop
-		* Добить строке табуляцией
-		i=Len(m.cString)
+		* Добить строку табуляцией
+		i = Len(m.cString)
 		Do While m.pos < .TabStop-.TabWidth
-			m.cString=m.cString+Tab
+			m.cString = m.cString+Tab
 			* Вот нафига нужен -1 я так и не понял :))
-			m.pos=(Int((m.pos-1+.TabWidth)/.TabWidth)*.TabWidth)+1
+			m.pos = (Int((m.pos-1+.TabWidth)/.TabWidth)*.TabWidth)+1
 		Enddo
 	Else
 		* Добавить 1 табуляцию
-		m.cString=m.cString+Tab
+		m.cString = m.cString+Tab
 	Endif
 	Return m.cString
 	
@@ -729,10 +755,10 @@ Define Class Bear As Session
 				Use In Select("fdxref")
 			Endif
 			Use In Select("fdkeywrd")
-			.LinesCount= Alines(.aString,Filetostr(m.OutFile),.T.)
+			.LinesCount = Alines(.aString,Filetostr(m.OutFile),.T.)
 			
-			.InFile=m.InFile
-			.OutFile=m.OutFile
+			.InFile = m.InFile
+			.OutFile = m.OutFile
 			
 			Erase (m.InFile)
 		Endif
@@ -755,12 +781,11 @@ Define Class Bear As Session
 		.B2C(.OptionKeywords)+;
 		.B2C(.OptionSpaces)+;
 		.B2C(.OptionIndent)+;
-		.B2C()+;
+		.B2C(.OptionExpandKeywords)+;
 		.B2C(.OptionCommentIndent)+;
 		.B2C(.OptionLineIndent)+;
 		.B2C(.OptionExtraProcedures)+;
 		.B2C(.OptionExtraDoCase)
-		
 	Endwith
 	
 	*:********************************************************************
@@ -769,14 +794,15 @@ Define Class Bear As Session
 	*:
 	*:********************************************************************
 	Procedure B2C(m.Val)
-	Local m.Ret
+	*ssa*		Local m.Ret
 	m.Val=Iif(Vartype(m.Val)='L',Iif(m.Val,1,0),m.Val)
-	m.Ret=""
-	Do While m.Val # 0
-		m.Ret=m.Ret+Chr(Mod(m.Val,256))
-		m.Val=Bitrshift(m.Val,8)
-	Enddo
-	Return Padr(m.Ret,4,Chr(0))
+	*ssa*		m.Ret=""
+	*ssa*		Do While m.Val # 0
+	*ssa*			m.Ret=m.Ret+Chr(Mod(m.Val,256))
+	*ssa*			m.Val=Bitrshift(m.Val,8)
+	*ssa*		Enddo
+	*ssa*		Return Padr(m.Ret,4,Chr(0))
+	Return BinToC(m.Val, '4rs')
 	
 	*:********************************************************************
 	*:
@@ -798,4 +824,4 @@ Define Class Bear As Session
 	Endwith
 	
 Enddefine
-*: End of : bear2.prg
+*: End of : bear2m.prg
