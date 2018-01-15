@@ -1,462 +1,801 @@
-* Причесыватель кода
-* Автор: Пирожков Вадим
-* Источник: FoxPro Club
-* Описание:
-* Причесыватель кода, может использоваться как простая замена
-* beautify.app или работать с ним в связке, сначала beautify.app наводит
-* порядок, а потом эта утилька придает ему тот вид к которму я больше
-* привых или можно поменять на корпоративный стиль оформления кода.
-* Первое упоминание про нее я нашел у себя датированное 17 октября 1997 года.
-* Маненько переделано под VFP8
 *:********************************************************************
 *:
-*: Procedure file :bear.prg
+*:	Procedure file: bear2.prg
+*:	Contents:
+*:		Class		Bear AS Session
+*:		Method:	Init(lcFileName)
+*:		Method:	Destroy
+*:		Method:	LoadFiles
+*:		Method:	LoadStrings(lcFileName)
+*:		Method:	Process
+*:		Method:	CheckWord(lcWord,lcTemplate,lnWordLen)
+*:		Method:	Put(lcStr)
+*:		Method:	PutH(lcStr)
+*:		Method:	PutE(lcStr)
+*:		Method:	Save
+*:		Method:	FileHeader
+*:		Method:	FileFooter
+*:		Method:	ClassHeader(lcClassName,
+*:		Method:	ProcHeader(lcName,lnType)
+*:		Method:	MethodHeader(lcName)
+*:		Method:	InLine(lcStr)
+*:		Method:	RightTrim(m.cString)
+*:		Method:	AdjustString(m.cString)
+*:		Method:	Beautify(m.source)
+*:		Method:	MakeOptions
+*:		Method:	B2C(m.Val)
+*:		Method:	FindFile(lcFile)
 *:
-*: (c) Piva, BEAR v.42 on 25.04.2003 09:38
+*: Piva BEAR v.200 format 23.04.2006 15:16:21
 *:********************************************************************
-#DEFINE BEAR_VERSION	"v.45"
-#DEFINE BEA_BAK 	"BEA_BAK.BEA"
-#DEFINE prg_step	0.05
-#DEFINE CR			CHR(13)
-#DEFINE CRLF		CHR(13)+CHR(10)
-#DEFINE WORD_BREAK	" ()[]"+CHR(9)
-#DEFINE NOTE_MARK	"*:"
+*
+* Новый Bear
+* Использует движок Beautify для преобразования текста и затем уже приглаживает по-моему
+* может работать просто вместо Beautify.APP
+* см. Опции OptionXXXXXXXX
+*
+* Пирожков В.В. 2006, piva@acmetelecom.ru
+* 13:00, суббота, 18 марта 2006 г.
+*
 
-#DEFINE c_Message	.T.
-#DEFINE CONTENTS	.F.
+#Define CR					Chr(13)
+#Define CRLF				Chr(13)+Chr(10)
+#Define WORD_BREAK			" ()[]"+Chr(9)
+#Define NOTE_MARK			"*:"
+#Define INLINE_COMMENT		Chr(38)+Chr(38)
+#Define Tab					Chr(9)
 
-* Using FoxTools.FLL for internal editor access
-
-PARAMETER m.PrgFile
-IF NOT _WINDOWS
-	WAIT WINDOW NOWAIT "Windows only"
-	RETURN .F.
-ENDIF
-IF EMPTY(WONTOP())
-	RETURN .F.
-ENDIF
-
-IF NOT "FOXTOOLS.FLL" $ SET('libr')
-	SET LIBR TO (SYS(2004)+'\FoxTools.fll') ADDITIVE
-ENDIF
-PRIVATE ALL
-
-_VISUAL="VISUAL" $ UPPER(VERS()) &&  ATC("VISUAL",VERS())>0
-
-wh=_WONTOP()
-
-IF wh < 1
-	RETURN .F.
-ENDIF
-DECLARE aa[25], PR[1]
-PR=""
-m.PrCount=0
-
-*=_EDGetEnv(wh,@aa)
-*m.PRGFILE=aa[1]
-
-=_EDGetEnv(wh,@aa)
-m.PrgFile=aa[1]
-m.Kind=aa[25]
-m.Size=aa[2]
+#Define ENV_FILENAME	1
+#Define ENV_SIZE		2
+#Define ENV_SELSTART	17
+#Define ENV_SELEND		18
+#Define ENV_TABWIDTH	21
+#Define ENV_KIND		25
 
 
-IF m.Kind < 1
-	=MsgBox("Invalid Edit Window","",48)
-	RETURN .F.
-ENDIF
+#Define c_Message	.T.
+#Define CONTENTS	.F.
 
-m.old=SELECT()
-SELECT 0
+Lparameters  m.InFile, m.options
 
-#IF NOT c_Message
-	=Progress(0,"Обработка файла"+CHR(13)+m.PrgFile ,"Bear")
-#ENDIF
-
-ib=0
-ID=0
-_P=""
-w=""
-w2=""
-w3=""
-
-clsn=""
-clsb=""
-cmnt=.F.
-
-prv=0
-
-_CLIPTEXT=""
-
-=_EdUndoOn(wh,.T.)		&& Включили UNDO
-m.CurPos=_EdGetPos(wh)	&& Запомнили позицию
-=_EdSetPos(wh,0)		&& Прыг в начало
-m.Start=0				&& Позиция начала строки
-m.End=0					&& Позиция конца строки
-
-IF _VISUAL
-	_SCREEN.MOUSEPOINTER=11
-ENDIF
-
-DO WHILE .T.
-	m.End=_EdSkipLin(wh, m.Start, 1)	&& Позиция конца - начало следующей строки
-	IF m.End=m.Start					&& Если они одинаковые - конец файла
-		EXIT
-	ENDIF
-	s=ALLTRIM(_EdGetStr(wh, m.Start, m.End))	&& Абтримили
-	IF AT(CR,s) > 0						&& Обкусали CR
-		s=LEFT(s,AT(CR,s)-1)
-	ENDIF
-	IF m.End/m.Size >= prv				&& Расчет показывалки
-		prv=m.End/SIZE+prg_step
-		#IF c_Message
-			SET MESSAGE TO m.PrgFile+" "+TRAN(m.End/m.Size*100,"999% completed.")
-		#ELSE
-			=Progress(m.End/SIZE)
-		#ENDIF
-	ENDIF
-	DO WHILE LEFT(ALLTRIM(s),1)=CHR(9)	&& Обкусали все TAB'ы
-		s=IIF(LEN(s)>1,SUBSTR(s,2),"")
-	ENDDO
-	w=UPPER(wordnum(s,1,WORD_BREAK))	&& Первое слово
-	w2=wordnum(s,2,WORD_BREAK)	&& Дороже второго
-	l=LEN(w)
-	l2=LEN(w2)
-
-	IF NOT cmnt AND LEFT(s,2)=NOTE_MARK
-		m.Start=m.End
-		LOOP
-	ENDIF
-
-	ID=IIF(ID<0,0,ID)
-*? id,ib,s
-
-	DO CASE
-		CASE ATC(w,'PROCEDURE')=1 AND l>=4
-			=ProcHeader()
-		CASE ATC(w,'FUNCTION')=1 AND l>=4
-			=FuncHeader()
-		CASE ATC(w,'DEFINE')=1 AND l>=4
-			DO CASE
-				CASE ATC(w2,'CLASS')=1 AND l2>=4
-					clsn=wordnum(s,3)
-					=ClassHeader()
-			ENDCASE
-		CASE ATC(w,'PROTECTED')=1 AND l>=4 AND ATC(w2,'PROCEDURE')=1 AND l2 >= 4
-			=ProcHeader()
-		CASE ATC(w,'PROTECTED')=1 AND l>=4 AND ATC(w2,'FUNCTION')=1 AND l2 >= 4
-			=FuncHeader()
-		CASE ATC(w,'HIDDEN')=1 AND l>=4 AND ATC(w2,'PROCEDURE')=1 AND l2 >= 4
-			=ProcHeader()
-		CASE ATC(w,'HIDDEN')=1 AND l>=4 AND ATC(w2,'FUNCTION')=1 AND l2 >= 4
-			=FuncHeader()
-	ENDCASE
-
-	IF l >=4 AND ;
-			(ATC(w,'ENDIF')=1 OR ;
-			ATC(w,'#ENDIF')=1 OR ;
-			ATC(w,'ENDDO')=1 OR ;
-			ATC(w,'ENDCASE')=1 OR ;
-			ATC(w,'ENDSCAN')=1 OR ;
-			ATC(w,'ENDFOR')=1 OR ;
-			ATC(w,'NEXT')=1 OR ;
-			ATC(w,'ENDWITH')=1 OR ;
-			ATC(w,'ENDPRINTJOB')=1 OR ;
-			ATC(w,'ENDTRY')=1)
-
-
-*			 ATC(w,'ENDFUNCTION')=1)
-*			 or ATC(w,'ENDPROCEDURE')=1 )
-
-* Decrement indention
-		ID=ID-1
-
-	ENDIF
-
-	IF l >=4 AND ATC(w,'ENDDEFINE')=1
-		clsn=""
-* Decrement Indent behind
-		ib=0
-		ID=0
-	ENDIF
-
-	IF l >=4 AND ;
-			(ATC(w,'ELSE')=1 OR ;
-			ATC(w,'CASE')=1 OR ;
-			ATC(w,'#ELSE')=1 OR ;
-			ATC(w,'#ELIF')=1 OR ;
-			ATC(w,'OTHERWISE')=1 OR ;
-			ATC(w,'CATCH')=1 OR ;
-			ATC(w,'FINALLY')=1 OR ;
-			ATC(w,'THROW')=1)
-
-		ID=ID-1
-	ENDIF
-
-	IF (ib+ID+IIF(cmnt,1,0)) > 0
-		_P=REPL(CHR(9),ib+ID+IIF(cmnt,1,0))
-	ELSE
-		_P=""
-	ENDIF
-
-	=Put(_P+s)
-
-	IF RIGHT(s,1)=';'
-		cmnt=.T.
-	ELSE
-		IF cmnt
-			cmnt=.F.
-		ENDIF
-	ENDIF
-
-	IF l >=4 AND ;
-			(ATC(w,'ELSE')=1 OR ;
-			ATC(w,'CASE')=1 OR ;
-			ATC(w,'#ELSE')=1 OR ;
-			ATC(w,'#ELIF')=1 OR ;
-			ATC(w,'OTHERWISE')=1 OR ;
-			ATC(w,'CATCH')=1 OR ;
-			ATC(w,'FINALLY')=1 OR ;
-			ATC(w,'THROW')=1)
-
-		ID=ID+1
-	ENDIF
-
-	DO CASE
-		CASE ATC(w,'PROCEDURE')=1 AND l>=4
-			ID=0
-		CASE ATC(w,'FUNCTION')=1 AND l>=4
-			ID=0
-		CASE ATC(w,'DO')=1 AND l=2
-			DO CASE
-				CASE ATC(w2,'WHILE')=1 AND l2>=4
-					ID=ID+1
-				CASE ATC(w2,'CASE')=1 AND l2=4
-					ID=ID+1
-			ENDCASE
-		CASE ATC(w,'FOR')=1 AND l=3
-			ID=ID+1
-		CASE ATC(w,'IF')=1 AND l=2
-			ID=ID+1
-		CASE ATC(w,'#IF')=1 AND l=3
-			ID=ID+1
-		CASE ATC(w,'DEFINE')=1 AND l>=4
-			DO CASE
-				CASE ATC(w2,'CLASS')=1 AND l2>=4
-					w2=wordnum(s,3)
-					ib=ib+1
-			ENDCASE
-		CASE ATC(w,'WITH')=1 AND l=4
-			ID=ID+1
-		CASE ATC(w,'SCAN')=1 AND l=4
-			ID=ID+1
-		CASE ATC(w,'TEXT')=1 AND l=4
-			ID=ID+1
-		CASE ATC(w,'PRINTJOB')=1 AND l>=4
-			ID=ID+1
-		CASE ATC(w,'TRY')=1 AND l=3
-			ID=ID+1
-	ENDCASE
-	m.Start=m.End
-ENDDO
-
-#IF c_Message
-	SET MESSAGE TO m.PrgFile+" "+TRAN(100,"999% completed.")
-#ELSE
-	=Progress(1)
-#ENDIF
-
-=Put("*: End of "+JUSTFNAME(m.PrgFile))
-
-=fileheader()
-
-=_EdSelect(wh,0,m.Size)
-=_EdDelete(wh)
-=_EdPaste(wh)
-
-=_EdSetPos(wh,m.CurPos)
-=_EdStoPos(wh,m.CurPos,.T.)
-
-=_EdUndoOn(wh,.F.)
-
-SELECT (m.old)
-
-#IF c_Message
-	SET MESSAGE TO
-#ELSE
-	=Progress()
-#ENDIF
-
-IF _VISUAL
-	_SCREEN.MOUSEPOINTER=0
-ENDIF
-
+Local o
+o=Createobject("Bear")
+If Vartype(o)='O'
+	With o
+		If Pcount()=2 And Vartype(m.options)='C' And Len(m.options)=36
+			.BeautifyMode=.T.
+			.options=m.options
+		Endif
+		.Process()
+		If .BeautifyMode
+			Strtofile(.Source,.OutFile)
+			Return .OutFile
+		Else
+			If Not Empty(.OutFile) And File(.OutFile)
+				Erase (.OutFile)
+			Endif
+		Endif
+	Endwith
+Endif
 
 *:********************************************************************
 *:
-*: Procedure : fileheader
+*:	Class:	Bear	based on Session
 *:
 *:********************************************************************
-PROCEDURE fileheader
-PRIVATE i, v
-v=""
-v=v+'*:'+REPL('*',68)+CRLF
-IF m.Kind=1
-	v=v+'*:'+CRLF
-	v=v+'*: Procedure file :'+m.PrgFile+CRLF
-ENDIF
-v=v+'*:'+CRLF
-
-IF m.PrCount > 0
-	v=v+"*: Contents :"+CRLF
-	FOR i=1 TO m.PrCount
-		IF PR[i]='Class  '
-*			v=v+'*: '+CRLF
-		ENDIF
-		v=v+"*: "+CHR(9)+CHR(9)+PR[i]+CRLF
-	NEXT
-	v=v+'*:'+CRLF
-ENDIF
-v=v+'*: (c) Piva, BEAR '+BEAR_VERSION+' on '+DTOC(DATE())+' '+SUBSTR(TIME(),1,5)+CRLF
-v=v+'*:'+REPL('*',68)+CRLF
-
-_CLIPTEXT=v+_CLIPTEXT
-
-*:********************************************************************
-*:
-*: Procedure : ProcHeader
-*:
-*:********************************************************************
-PROCEDURE ProcHeader
-IF ATC(w,'PROTECTED')=1 OR ATC(w,'HIDDEN')=1
-	w2=wordnum(s,3,WORD_BREAK)
-ENDIF
-
-IF CONTENTS
-	m.PrCount=m.PrCount+1
-	IF m.PrCount > ALEN(PR,1)
-		DECLARE PR[m.PrCount]
-	ENDIF
-	PR[m.PrCount]="Procedure "+clsn+IIF(NOT EMPTY(clsn),".","")+w2
-ENDIF
-
-IF NOT EMPTY(clsn)
-	=classmethodheader()
-ELSE
-	=Put(REPL(CHR(9),ib+ID)+'*:'+REPL('*',68))
-	=Put(REPL(CHR(9),ib+ID)+'*:')
-	=Put(REPL(CHR(9),ib+ID)+'*: Procedure : '+w2)
-	=Put(REPL(CHR(9),ib+ID)+'*:')
-	=Put(REPL(CHR(9),ib+ID)+'*:'+REPL('*',68))
-ENDIF
-
-*:********************************************************************
-*:
-*: Procedure : FuncHeader
-*:
-*:********************************************************************
-PROCEDURE FuncHeader
-IF ATC(w,'PROTECTED')=1 OR ATC(w,'HIDDEN')=1
-	w2=wordnum(s,3,WORD_BREAK)
-*	PR[m.PrCount]="Function  "+clsn+iif(not empty(clsn),".","")+w2+' '+upper(w)
-*else
-ENDIF
-
-IF CONTENTS
-	m.PrCount=m.PrCount+1
-	IF m.PrCount > ALEN(PR,1)
-		DECLARE PR[m.PrCount]
-	ENDIF
-	PR[m.PrCount]="Function  "+clsn+IIF(NOT EMPTY(clsn),".","")+w2
-ENDIF
-
-
-IF NOT EMPTY(clsn)
-	=classmethodheader()
-ELSE
-	=Put(REPL(CHR(9),ib+ID)+'*:'+REPL('*',68))
-	=Put(REPL(CHR(9),ib+ID)+'*:')
-	=Put(REPL(CHR(9),ib+ID)+'*: Function : '+w2)
-	=Put(REPL(CHR(9),ib+ID)+'*:')
-	=Put(REPL(CHR(9),ib+ID)+'*:'+REPL('*',68))
-ENDIF
-
-*:********************************************************************
-*:
-*: Procedure : ClassHeader
-*:
-*:********************************************************************
-PROCEDURE ClassHeader
-PRIVATE _s, k
-_s=s
-k=ATC("AS ",_s)
-IF k=0
-	k=ATC("AS"+CHR(9), _s)
-ENDIF
-IF k > 0
-	clsb=wordnum(SUBSTR(_s,k+3), 1)
-ELSE
-	clsb=""
-ENDIF
-
-m.PrCount=m.PrCount+IIF(CONTENTS,2,1)
-IF m.PrCount > ALEN(PR,1)
-	DECLARE PR[m.PrCount]
-ENDIF
-IF CONTENTS
-	PR[m.PrCount-1]=""
-ENDIF
-PR[m.PrCount]="Class     "+clsn+" AS "+clsb
-
-=Put(REPL(CHR(9),ib)+'*:'+REPL('*',68))
-=Put(REPL(CHR(9),ib)+'*:')
-=Put(REPL(CHR(9),ib)+'*:    Class : '+clsn+IIF(NOT EMPTY( clsb )," based on "+clsb,""))
-=Put(REPL(CHR(9),ib)+'*:')
-=Put(REPL(CHR(9),ib)+'*:'+REPL('*',68))
-
-*:********************************************************************
-*:
-*: Procedure : ClassMethodHeader
-*:
-*:********************************************************************
-PROCEDURE classmethodheader
-PRIVATE m.w_
-m.w_=""
-
-IF ATC(w,'PROTECTED')=1 OR ATC(w,'HIDDEN')=1
-	w2=wordnum(s,3,WORD_BREAK)
-	PR[m.PrCount]=PR[m.PrCount]+" "+w
-	m.w_=w
-ENDIF
-
-=Put(REPL(CHR(9),ib+ID)+'*:'+REPL('*',68))
-=Put(REPL(CHR(9),ib+ID)+'*:')
-=Put(REPL(CHR(9),ib+ID)+'*: Method : '+w2+' of class '+clsn+IIF(!EMPTY(m.w_)," - "+m.w_,""))
-=Put(REPL(CHR(9),ib+ID)+'*:')
-=Put(REPL(CHR(9),ib+ID)+'*:'+REPL('*',68))
-
-*:********************************************************************
-*:
-*: Procedure : MSG
-*:
-*:********************************************************************
-PROCEDURE MSG
-PARAMETER m.msgtext
-IF _VISUAL
-	MESSAGEBOX(m.msgtext,16,'Bea')
-ELSE
-	=MsgBox(m.msgtext,"Bea",16)
-ENDIF
-RETURN .F.
-
-
-*:********************************************************************
-*:
-*: Procedure : Put
-*:
-*:********************************************************************
-PROCEDURE Put
-PARAMETER m.What
-_CLIPTEXT=_CLIPTEXT+m.What+CRLF
-
-*: End of bear.prg
+Define Class Bear As Session
+	Version="v.200"
+	Title='Bear 2'
+	FoxTools=""																			&& Файл FoxTools.FLL
+	Keywords=""																			&& Файл FDKeyWrd
+	FD3FLL=""																				&& Файл FD3.DLL
+	
+	DetachFoxTools=.T.															&& Отключать FoxTools после работы
+	
+	TabWidth=4																			&& Размер табуляции
+	TabStop=50																			&& Строка где выравнивать строковый комментарий
+	
+	FileName=""																			&& Имя причесываемого файла
+	
+	WHandle=0																				&& Хэнл окна
+	Position=0																			&& Текущия позиция в редакторе
+	FileSize=0																			&& Размер файла
+	SelStart=0																			&& Позиция выделения
+	SelEnd=0
+	Kind=0																					&& Тип открытого окна - рекдатор или Snippet
+	
+	LinesCount=0																		&& Служебные переменные управления массивами
+	HeadersCount=0
+	
+	Source=""																				&& Где храним формируемый текст
+	Header=""																				&& Заголовок файла
+	Footer=""
+	
+	Level=0																					&& Текущй уровен вложенности
+	NextLevel=0																			&& Следующий
+	BaseLevel=0																			&& Базовый (внутри классов)
+	CurrentClass=""																	&& Имя текущего класса
+	IsComment=.F.																		&& Комментарий
+	
+	LineSize=68																			&& Размер строки пробиваетомй звездами
+	
+	BeautifyMode=.F.																&& Вызов из меню как Beautify.APP
+	options=""																			&& Опции передаваемые Beautify
+	InFile=""																				&& входлящий файл для beautify
+	OutFile=""																			&& Выходной файл
+	
+	UseBeautify=.T.																	&& Использовать Beautfy для простого вызова
+	FormatProcedures=.T.														&& Дописыает заголовки процедур и методов
+	FormatClasses=.T.																&& Дописываает закоголовка файлов
+	FormatFile=.T.																	&& Дописывает заголовок файла
+	
+	MyIndent=.T.																		&& Моя систтема отступов
+	* - можно отключить - если использется только режим Beautify
+	
+	* Опции Beautify.APP
+	* Используются для простого вызова
+	
+	* 1 - UpperCase
+	* 2 - LowerCase
+	* 3 - MixedCase
+	* 4 - NoChange
+	
+	OptionKeywords=3
+	
+	* 1 - UpperCase
+	* 2 - LowerCase
+	* 3 - Mach 1-st occetence
+	* 4 - NoChange
+	
+	OptionSymbols=3
+	
+	
+	* 1 - Tab
+	* 2 - Spaces
+	* 3 - NoChange
+	
+	OptionIndent=1
+	
+	OptionSpaces=4
+	
+	OptionCommentIndent=.F.
+	OptionLineIndent=.F.
+	OptionExtraProcedures=.F.
+	OptionExtraDoCase=.F.
+	
+	Dimension aString[1], aHeader[1]
+	
+	*:********************************************************************
+	*:
+	*:	Method:	Init(lcFileName) of class Bear
+	*:
+	*:********************************************************************
+	Procedure Init(lcFileName)
+	With This
+		Sys(3056)
+		If Not .LoadFiles()
+			Return .F.
+		Endif
+		If Not .LoadStrings(lcFileName)
+			Return .F.
+		Endif
+	Endwith
+	
+	*:********************************************************************
+	*:
+	*:	Method:	Destroy of class Bear
+	*:
+	*:********************************************************************
+	Procedure Destroy
+	With This
+		If .DetachFoxTools
+			Release Library (.FoxTools)
+		Endif
+		Use In Select("Keywords")
+	Endwith
+	
+	*:********************************************************************
+	*:
+	*:	Method:	LoadFiles of class Bear
+	*:
+	*:********************************************************************
+	Procedure LoadFiles
+	With This
+		.FoxTools=.FindFile("FoxTools.FLL")
+		If Empty(.FoxTools)
+			Return .F.
+		Endif
+		.DetachFoxTools=Not "FOXTOOLS.FLL" $ Set('library')
+		If .DetachFoxTools
+			Set Library To (.FoxTools) Additive
+		Endif
+	Endwith
+	
+	*:********************************************************************
+	*:
+	*:	Method:	LoadStrings(lcFileName) of class Bear
+	*:
+	*:********************************************************************
+	Procedure LoadStrings(lcFileName)
+	With This
+		Local lcSource
+		If Empty(lcFileName)
+			.WHandle=_WOnTop()
+			If .WHandle < 1
+				Return .F.
+			Endif
+			Local laFileInfo[25]
+			
+			_EdGetEnv(.WHandle,@laFileInfo)
+			.Kind=laFileInfo[ENV_KIND]
+			
+			If .Kind<1
+				Messagebox("Текущее окно не являтеся окном редактора FoxPro",16,.Title)
+				Return .F.
+			Endif
+			
+			.Position=_EdGetPos(.WHandle)
+			
+			.SelStart	=laFileInfo[ENV_SELSTART]
+			.SelEnd		=laFileInfo[ENV_SELEND]
+			.FileName	=laFileInfo[ENV_FILENAME]
+			.FileSize	=laFileInfo[ENV_SIZE]
+			.TabWidth	=laFileInfo[ENV_TABWIDTH]
+			
+			* Черт прошлый раз не допер как выдернуть весь текст сразу
+			lcSource=_EdGetStr(.WHandle,0,.FileSize)
+		Else
+			If Not File(lcFileName)
+				Error 1,lcFileName
+				Return .F.
+			Endif
+			.FileName=lcFileName
+			lcSource=Filetostr(lcFileName)
+		Endif
+		If .BeautifyMode Or .UseBeautify
+			If Not .Beautify(lcSource)
+				Return .F.
+			Endif
+		Else
+			.LinesCount=Alines(.aString,lcSource,.T.)
+		Endif
+	Endwith
+	
+	*:********************************************************************
+	*:
+	*:	Method:	Process of class Bear
+	*:
+	*:********************************************************************
+	Procedure Process
+	With This
+		Local lnCount, lcStr, lcClassName, lnLevel
+		Local laWords[1], lnWords
+		
+		Dimension .aHeader[1]
+		.HeadersCount=0
+		
+		.Source=""
+		
+		lcPreText=""
+		.Level=0
+		.NextLevel=0
+		.BaseLevel=0
+		
+		For lnCount=1 To .LinesCount
+			lnLevel=0
+			lcStr=.aString[lnCount]
+			If Empty(lcStr)
+				.Put()
+				Loop
+			Endif
+			* Обкусаем начальные TAB'ы
+			Do While Left(Alltrim(lcStr),1)=Tab
+				lcStr=Substr(lcStr,2)
+			Enddo
+			* И конечные тоже
+			Do While Right(Alltrim(lcStr),1)=Tab
+				lcStr=Substr(lcStr,1,Len(lcStr)-1)
+			Enddo
+			
+			Dimension laWord[GetWordCount(lcStr,WORD_BREAK)]
+			For lnWord=1 To Alen(laWord)
+				laWord[lnWord]=Getwordnum(lcStr,lnWord,WORD_BREAK)
+			Next
+			
+			
+			If 	.FormatClasses ;
+				and .CheckWord(laWord[1],'Define',4) ;
+				and .CheckWord(laWord[2],'Class',4)
+				
+				.CurrentClass=laWord[3]
+				
+				.Level=0
+				.NextLevel=0
+				.BaseLevel=0
+				lnLevel=1
+				
+				.ClassHeader(laWord[3],laWord[5])
+				
+			Endif
+			
+			If .FormatProcedures ;
+				and .CheckWord(laWord[1],"Protected",4) ;
+				or .CheckWord(laWord[1],"Hidden",4)
+				
+				If .CheckWord(laWord[2],"Procedure",4) ;
+					or .CheckWord(laWord[2],"Function",4) ;
+					
+					.Level=0
+					.ProcHeader(laWord[3],Atc(laWord[3],"Function"))
+					.NextLevel=0
+					
+				Endif
+			Endif
+			
+			If .FormatProcedures ;
+				and .CheckWord(laWord[1],"Procedure",4) ;
+				or .CheckWord(laWord[1],"Function",4) ;
+				
+				.Level=0
+				.ProcHeader(laWord[2],Atc(laWord[2],"Function"))
+				.NextLevel=0
+				
+			Endif
+			
+			If Not .MyIndent
+				=Put(.aString[lnCount])
+				Loop
+			Endif
+			
+			If (.FormatProcedures ;
+				or .FormatClasses ;
+				or .FormatFile ) ;
+				and laWord[1]=NOTE_MARK
+				Loop
+			Endif
+			
+			* Коментарий или продолжения комментария
+			If .IsComment Or Left(laWord[1],1)='*' Or (Upper(laWord[1])="NOTE" And Len(laWord[1])=4)
+				.Put(lcStr)
+				.IsComment=Right(Getwordnum(lcStr,Getwordcount(lcStr,WORD_BREAK),WORD_BREAK),1)=";"
+				Loop
+			Endif
+			
+			If 	.CheckWord(laWord[1],'EndDefine',4)
+				.CurrentClass=""
+				.BaseLevel=0
+				.Level=0
+				.NextLevel=0
+			Endif
+			
+			If .CheckWord(laWord[1],'IF'		,2) ;
+				or .CheckWord(laWord[1],'FOR'		,3) ;
+				or .CheckWord(laWord[1],'SCAN'		,4) ;
+				or .CheckWord(laWord[1],'WITH'		,4) ;
+				or .CheckWord(laWord[1],'TRY'		,3) ;
+				or .CheckWord(laWord[1],'CATCH'		,4) ;
+				or .CheckWord(laWord[1],'PRINTJOB'	,4) ;
+				or .CheckWord(laWord[1],'#IF'		,3) ;
+				or .CheckWord(laWord[1],'#IFDEF'	,4) ;
+				or (.CheckWord(laWord[1],'DO',2) ;
+				and (.CheckWord(laWord[2],'WHILE',4) ;
+				or .CheckWord(laWord[2],'CASE',4)))
+				
+				.NextLevel=.NextLevel+1
+				
+			Endif
+			
+			
+			If .CheckWord(laWord[1],'ELSE'		,4) ;
+				or .CheckWord(laWord[1],'CASE'		,4) ;
+				or .CheckWord(laWord[1],'CATCH'		,4) ;
+				or .CheckWord(laWord[1],'FINALLY'	,4) ;
+				or .CheckWord(laWord[1],'#ELIF'		,4) ;
+				or .CheckWord(laWord[1],'#ELSE'		,4) ;
+				
+				.Level=.Level-1
+				*				.NextLevel=.NextLevel+1
+				
+			Endif
+			
+			If .CheckWord(laWord[1],'ENDIF'		,4) ;
+				or .CheckWord(laWord[1],'ENDCASE'	,4) ;
+				or .CheckWord(laWord[1],'ENDTRY'	,4) ;
+				or .CheckWord(laWord[1],'ENDDO'		,4) ;
+				or .CheckWord(laWord[1],'ENDFOR'	,4) ;
+				or .CheckWord(laWord[1],'ENDWITH'	,4) ;
+				or .CheckWord(laWord[1],'NEXT'		,4) ;
+				or .CheckWord(laWord[1],'#ENDIF'	,4) ;
+				
+				
+				.Level=.Level-1
+				.NextLevel=.NextLevel-1
+				
+			Endif
+			
+			If .CheckWord(laWord[1],'ENDPROC'	,4) ;
+				or .CheckWord(laWord[1],'ENDFUNC'	,4) ;
+				
+				.Level=0
+				.NextLevel=0
+				
+			Endif
+			
+			If Atc(INLINE_COMMENT,lcStr)>0
+				lcStr=Replicate(Tab,.BaseLevel+.Level)+lcStr
+				lcStr=.InLine(lcStr)
+				.Source=.Source+lcStr+CRLF
+			Else
+				.Put(lcStr)
+			Endif
+			
+			.Level=.NextLevel
+			
+			If Not Empty(lnLevel)
+				.BaseLevel=lnLevel
+			Endif
+			
+		Next
+		If .FormatFile
+			.FileHeader()
+			.FileFooter()
+		Endif
+		
+		.Source=.Header+.Source+.Footer
+		.Save()
+		
+	Endwith
+	
+	*:********************************************************************
+	*:
+	*:	Method:	CheckWord(lcWord,lcTemplate,lnWordLen) of class Bear
+	*:
+	*:********************************************************************
+	Procedure CheckWord(lcWord,lcTemplate,lnWordLen)
+	With This
+		Return Atc(lcWord,lcTemplate)=1 And Len(lcWord)>=lnWordLen
+	Endwith
+	
+	
+	*:********************************************************************
+	*:
+	*:	Method:	Put(lcStr) of class Bear
+	*:
+	*:********************************************************************
+	Procedure Put(lcStr)
+	With This
+		.Source=.Source+Replicate(Tab,.BaseLevel+.Level)+Iif(Empty(lcStr),"",lcStr)+CRLF
+	Endwith
+	
+	*:********************************************************************
+	*:
+	*:	Method:	PutH(lcStr) of class Bear
+	*:
+	*:********************************************************************
+	Procedure PutH(lcStr)
+	With This
+		.Header=.Header+Iif(Empty(lcStr),"",lcStr)+CRLF
+	Endwith
+	
+	*:********************************************************************
+	*:
+	*:	Method:	PutE(lcStr) of class Bear
+	*:
+	*:********************************************************************
+	Procedure PutE(lcStr)
+	With This
+		.Footer=.Footer+Iif(Empty(lcStr),"",lcStr)+CRLF
+	Endwith
+	
+	*:********************************************************************
+	*:
+	*:	Method:	Save of class Bear
+	*:
+	*:********************************************************************
+	Procedure Save
+	With This
+		If .BeautifyMode
+			Strtofile(.Source,.OutFile)
+			Return .T.
+		Endif
+		
+		* Было откыто окно редактора
+		If Not Empty(.WHandle)
+			_EdUndoOn(.WHandle,.T.)											&& Включиди режим UNDO для 1 изменеия теска
+			_EdSelect(.WHandle,0,.FileSize)							&& Выбрали весть текст
+			_EdDelete(.WHandle)													&& Все удалили
+			_EdInsert(.WHandle,.Source,Len(.Source))		&& Вствили отформатированыый текст
+			_EdUndoOn(.WHandle,.F.)											&& Выключили UNDO
+			_EdSetPos(.WHandle,.Position)								&& Встали на позицию
+			_EdStoPos(.WHandle,.Position,.T.)						&& Передвинули указатель на эту позицию
+		Else
+			* Если передавали имя файла - то его и переписываем
+			Strtofile(.Source,.FileName,0)
+		Endif
+	Endwith
+	
+	
+	*:********************************************************************
+	*:
+	*:	Method:	FileHeader of class Bear
+	*:
+	*:********************************************************************
+	Procedure FileHeader
+	With This
+		.PutH(NOTE_MARK+Replicate("*",.LineSize))
+		.PutH(NOTE_MARK)
+		
+		If .Kind=1
+			.PutH(NOTE_MARK+Tab+"Procedure file: "+.FileName)
+		Endif
+		If .HeadersCount>0
+			.PutH(NOTE_MARK+Tab+"Contents:")
+			For i=1 To .HeadersCount
+				.PutH(NOTE_MARK+Tab+Tab+.aHeader[i])
+			Next
+		Endif
+		.PutH(NOTE_MARK)
+		.PutH(NOTE_MARK+" Piva BEAR "+.Version+" format "+Transform(Datetime()))
+		.PutH(NOTE_MARK+Replicate("*",.LineSize))
+	Endwith
+	
+	*:********************************************************************
+	*:
+	*:	Method:	FileFooter of class Bear
+	*:
+	*:********************************************************************
+	Procedure FileFooter
+	With This
+		If .Kind=1
+			.PutE(NOTE_MARK+" End of : "+.FileName)
+		Else
+			
+		Endif
+	Endwith
+	
+	*:********************************************************************
+	*:
+	*:	Method:	ClassHeader(lcClassName, of class Bear
+	*:
+	*:********************************************************************
+	Procedure ClassHeader(lcClassName, lcBaseClass)
+	With This
+		.HeadersCount = .HeadersCount + 1
+		Dimension .aHeader[.HeadersCount]
+		.aHeader[.HeadersCount]="Class"+Tab+Tab+lcClassName+" AS "+lcBaseClass
+		
+		.Put(NOTE_MARK+Replicate("*",.LineSize))
+		.Put(NOTE_MARK)
+		.Put(NOTE_MARK+Tab+"Class:"+Tab+lcClassName+Tab+"based on "+lcBaseClass)
+		.Put(NOTE_MARK)
+		.Put(NOTE_MARK+Replicate("*",.LineSize))
+	Endwith
+	
+	*:********************************************************************
+	*:
+	*:	Method:	ProcHeader(lcName,lnType) of class Bear
+	*:
+	*:********************************************************************
+	Procedure ProcHeader(lcName,lnType)
+	With This
+		If Not Empty(.CurrentClass)
+			Return .MethodHeader(lcName)
+		Endif
+		
+		.HeadersCount = .HeadersCount + 1
+		Dimension .aHeader[.HeadersCount]
+		.aHeader[.HeadersCount]=Iif(Bittest(lnType,0),"Function:","Procedure:")+Tab+lcName
+		
+		.Put(NOTE_MARK+Replicate("*",.LineSize))
+		.Put(NOTE_MARK)
+		.Put(NOTE_MARK+Tab+Iif(Bittest(lnType,0),"Function:","Procedure:")+Tab+lcName)
+		.Put(NOTE_MARK)
+		.Put(NOTE_MARK+Replicate("*",.LineSize))
+		
+	Endwith
+	
+	*:********************************************************************
+	*:
+	*:	Method:	MethodHeader(lcName) of class Bear
+	*:
+	*:********************************************************************
+	Procedure MethodHeader(lcName)
+	With This
+		.HeadersCount = .HeadersCount + 1
+		Dimension .aHeader[.HeadersCount]
+		.aHeader[.HeadersCount]="Method:"+Tab+lcName
+		
+		.Put(NOTE_MARK+Replicate("*",.LineSize))
+		.Put(NOTE_MARK)
+		.Put(NOTE_MARK+Tab+"Method:"+Tab+lcName+" of class "+.CurrentClass)
+		.Put(NOTE_MARK)
+		.Put(NOTE_MARK+Replicate("*",.LineSize))
+		
+	Endwith
+	
+	
+	*:********************************************************************
+	*:
+	*:	Method:	InLine(lcStr) of class Bear
+	*:
+	*:********************************************************************
+	Procedure InLine(lcStr)
+	With This
+		* Если комментарий уже вставлен
+		If Chr(38)+Chr(38) $ lcStr
+			Local lnCommentPos, lcSuffix
+			lnCommentPos=At(INLINE_COMMENT,lcStr)
+			lcSuffix=.RightTrim(Substr(lcStr,lnCommentPos))
+			lcStr=.RightTrim(Substr(lcStr,1,lnCommentPos-1))
+			If Not Empty(lcSuffix)
+				lcStr=.AdjustString(lcStr)+lcSuffix
+			Endif
+		Endif
+		Return lcStr
+	Endwith
+	
+	*:********************************************************************
+	*:
+	*:	Method:	RightTrim(m.cString) of class Bear
+	*:
+	*:********************************************************************
+	Procedure RightTrim(m.cString)
+	* Remove all trailing spaces and tabs and whitespace
+	Local i,c
+	c=m.cString
+	For i=Len(m.cString) To 1 Step -1
+		If Inlist(Asc(Substr(m.c,i-1,1)),32,9,160)
+			m.c=Substr(m.c,1,i-1)
+		Else
+			Exit
+		Endif
+	Next
+	m.c=Strtran(m.c,Chr(13),"")
+	m.c=Strtran(m.c,Chr(10),"")
+	Return m.c
+	
+	*:********************************************************************
+	*:
+	*:	Method:	AdjustString(m.cString) of class Bear
+	*:
+	*:********************************************************************
+	Procedure AdjustString(m.cString)
+	* Выравнивание строки до позиции вставки комментария
+	Local i, m.pos
+	m.pos=0
+	For i=1 To Len(m.cString)
+		If Substr(m.cString,i,1)=Tab
+			m.pos=Int((m.pos-1+.TabWidth)/.TabWidth)*.TabWidth+1
+		Else
+			m.pos = m.pos + 1
+		Endif
+	Next
+	If m.pos < .TabStop
+		* Добить строке табуляцией
+		i=Len(m.cString)
+		Do While m.pos < .TabStop-.TabWidth
+			m.cString=m.cString+Tab
+			* Вот нафига нужен -1 я так и не понял :))
+			m.pos=(Int((m.pos-1+.TabWidth)/.TabWidth)*.TabWidth)+1
+		Enddo
+	Else
+		* Добавить 1 табуляцию
+		m.cString=m.cString+Tab
+	Endif
+	Return m.cString
+	
+	*:********************************************************************
+	*:
+	*:	Method:	Beautify(m.source) of class Bear
+	*:
+	*:********************************************************************
+	Procedure Beautify(m.source)
+	* Код системного Beautify
+	With This
+		m.Keywords=.FindFile("FDKEYWRD.DBF")
+		m.FD3FLL=.FindFile("FD3.FLL")
+		
+		Local fsuccess, m.OutFile, m.InFile, xrefname, m.options
+		Local M.errlogfile, moldlogerrors
+		If File(m.Keywords) And File(m.FD3FLL)
+			m.options=.MakeOptions()
+			Use (m.Keywords) In 0  Again Alias fdkeywrd Order token
+			Select fdkeywrd
+			Set Library To (m.FD3FLL) Additive
+			m.InFile = Sys(2023)+"\"+Substr(Sys(2015), 3, 10)+".TMP"
+			Strtofile(m.source,m.InFile)
+			m.OutFile = Sys(2023)+"\"+Substr(Sys(2015), 3, 10)+".TMP"
+			
+			If (Substr(m.options, 1, 1)=Chr(3))
+				m.xrefname = "FDXREF"
+				
+				Create Cursor (m.xrefname) ;
+				( symbol 		c(65);
+				, procname 		c(40);
+				, Flag 			c(1);
+				, Lineno 		N(5);
+				, sniprecno 	N(5);
+				, snipfld 		c(10);
+				, sniplineno 	N(5);
+				, Adjust 		N(5);
+				, FileName 		c(161))
+				
+				Index On Flag Tag Flag
+				Index On Upper(symbol)+Flag Tag symbol
+			Endif
+			m.fsuccess = Beautify(m.InFile,m.OutFile,m.options)
+			Release Library (m.FD3FLL)
+			If (Substr(m.options, 1, 1)=Chr(3))
+				Use In Select("fdxref")
+			Endif
+			Use In Select("fdkeywrd")
+			.LinesCount= Alines(.aString,Filetostr(m.OutFile),.T.)
+			
+			.InFile=m.InFile
+			.OutFile=m.OutFile
+			
+			Erase (m.InFile)
+		Endif
+		Return m.fsuccess
+	Endwith
+	
+	*:********************************************************************
+	*:
+	*:	Method:	MakeOptions of class Bear
+	*:
+	*:********************************************************************
+	Procedure MakeOptions
+	* Создание опций из Настроек проги
+	With This
+		If .BeautifyMode
+			Return .options
+		Endif
+		Return  ;
+		.B2C(.OptionSymbols)+;
+		.B2C(.OptionKeywords)+;
+		.B2C(.OptionSpaces)+;
+		.B2C(.OptionIndent)+;
+		.B2C()+;
+		.B2C(.OptionCommentIndent)+;
+		.B2C(.OptionLineIndent)+;
+		.B2C(.OptionExtraProcedures)+;
+		.B2C(.OptionExtraDoCase)
+		
+	Endwith
+	
+	*:********************************************************************
+	*:
+	*:	Method:	B2C(m.Val) of class Bear
+	*:
+	*:********************************************************************
+	Procedure B2C(m.Val)
+	Local m.Ret
+	m.Val=Iif(Vartype(m.Val)='L',Iif(m.Val,1,0),m.Val)
+	m.Ret=""
+	Do While m.Val # 0
+		m.Ret=m.Ret+Chr(Mod(m.Val,256))
+		m.Val=Bitrshift(m.Val,8)
+	Enddo
+	Return Padr(m.Ret,4,Chr(0))
+	
+	*:********************************************************************
+	*:
+	*:	Method:	FindFile(lcFile) of class Bear
+	*:
+	*:********************************************************************
+	Procedure FindFile(lcFile)
+	With This
+		If File(lcFile)
+			Return lcFile
+		Endif
+		If File(Home()+lcFile)
+			Return Home()+lcFile
+		Endif
+		If File(Home()+"wizards\"+lcFile)
+			Return Home()+"wizards\"+lcFile
+		Endif
+		Return ""
+	Endwith
+	
+Enddefine
+*: End of : bear2.prg
