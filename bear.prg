@@ -138,10 +138,10 @@ Define Class Bear As Session
 	
 	UseBeautify = .T.																	&& Использовать Beautfy для простого вызова
 	FormatProcedures = .T.														&& Дописыает заголовки процедур и методов
-	FormatClasses = .T.																&& Дописываает закоголовка файлов
+	FormatClasses = .T.																&& Дописываает закоголовки определений классов
 	FormatFile = .T.																	&& Дописывает заголовок файла
 	
-	MyIndent = .T.																		&& Моя (PiVa) система отступов
+	MyIndent = .F.																		&& Моя (PiVa) система отступов
 	* - можно отключить - если использется только режим Beautify
 	
 	* Опции Beautify.APP
@@ -172,7 +172,7 @@ Define Class Bear As Session
 	OptionExpandKeywords = .T.
 	
 	OptionCommentIndent = .F.
-	OptionLineIndent = .F.
+	OptionLineIndent = .T.
 	OptionExtraProcedures = .F.
 	OptionExtraDoCase = .T.
 	
@@ -495,7 +495,7 @@ Define Class Bear As Session
 		
 		* Было откыто окно редактора
 		If Not Empty(.WHandle)
-			_EdUndoOn(.WHandle,.T.)											&& Включиди режим UNDO для 1 изменеия теска
+			_EdUndoOn(.WHandle,.T.)											&& Включили режим UNDO для 1 изменения текста
 			_EdSelect(.WHandle,0,.FileSize)							&& Выбрали весть текст
 			_EdDelete(.WHandle)													&& Все удалили
 *ssa*	  при обработке больших файлов вылезло ограничение на размер вставляемого блока.
