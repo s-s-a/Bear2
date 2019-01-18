@@ -1,33 +1,28 @@
-# use glob syntax.
+﻿# use glob syntax.
 syntax: glob
 
+# VFP data files
+*.[Ff][Pp][Tt]
+*.[Cc][Dd][Xx]
+*.[Dd][Bb][Ff]
+
 # VFP generated files
-*.err
-*.ERR
-*.mpr
-*.MPR
+*.[Ee][Rr][Rr]
+*.[Mm][Pp][Rr]
 
 # VFP compiled files
-*.fxp
-*.FXP
-*.mpx
-*.MPX
-*.qpx
-*.QPX
+*.[Ff][Xx][Pp]
+*.[Mm][Pp][Xx]
+*.[Qq][Pp][Xx]
 
 # VFP backup files
-*.bak
-*.BAK
-*.tbk
-*.TBK
+*.[Bb][Aa][Kk]
+*.[Tt][Bb][Kk]
 
 # Misc backup files
-*.orig
-*.ORIG
-*.save
-*.SAVE
-*.zip
-*.ZIP
+*.[Oo][Rr][Ii][Gg]
+*.[Ss][Aa][Vv][Ee]
+*.[Zz][Ii][Pp]
 
 # Other files
 *.chw
@@ -39,15 +34,63 @@ bin/*
 obj/*
 
 # Specific files
-*.exe
-*.EXE
-*.dll
-*.DLL
-*.app
-*.APP
+*.[Ee][Xx][Ee]
+*.[Dd][Ll][Ll]
+*.[Aa][Pp][Pp]
 
 Source/Hold/*
-x.prg
-x.PRG
 Backup.bat
 Tests/FXU*.*
+__Data1/*
+piter/*
+*_MetaData.*
+*_ref.*
+
+#Ignore thumbnails created by Windows
+Thumbs.db
+
+#Ignore files built by Visual Studio
+*.obj
+*.pdb
+*.user
+*.aps
+*.pch
+*.vspscc
+*_i.c
+*_p.c
+*.ncb
+*.tlb
+*.tlh
+*.cache
+*.ilk
+*.log
+*.rdp
+[Bb]in
+[Dd]ebug*/
+*.lib
+*.sbr
+obj/
+[Rr]elease*/
+_ReSharper*/
+[Tt]est[Rr]esult*
+.vs/
+#Nuget packages folder
+packages/
+
+# VS Code folder
+**/.vscode
+
+# Masclaneus folders
+LAST VERSION/*
+1C_Import/*
+tmp/*
+ФОТО ТОВАРОВ/*
+ПЕРЕВОД В 1С/*
+АРХИВ СКАН-ДОКУМЕНТОВ/*
+
+# VFP binary files
+**/*.[Pp][Jj][XxTt]
+**/*.[SsVv][Cc][XxTt]
+**/*.[Ff][Rr][XxTt]
+**/*.[Mm][Nn][XxTt]
+**/*.[Mm][Pp][Xx]
