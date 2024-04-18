@@ -38,14 +38,6 @@ obj/*
 *.[Dd][Ll][Ll]
 *.[Aa][Pp][Pp]
 
-Source/Hold/*
-Backup.bat
-Tests/FXU*.*
-__Data1/*
-piter/*
-*_MetaData.*
-*_ref.*
-
 #Ignore thumbnails created by Windows
 Thumbs.db
 
@@ -79,14 +71,9 @@ packages/
 
 # VS Code folder
 **/.vscode
+**/.idea
 
 # Masclaneus folders
-LAST VERSION/*
-1C_Import/*
-tmp/*
-ФОТО ТОВАРОВ/*
-ПЕРЕВОД В 1С/*
-АРХИВ СКАН-ДОКУМЕНТОВ/*
 
 # VFP binary files
 **/*.[Pp][Jj][XxTt]
@@ -94,3 +81,6 @@ tmp/*
 **/*.[Ff][Rr][XxTt]
 **/*.[Mm][Nn][XxTt]
 **/*.[Mm][Pp][Xx]
+foxbin2prg.cfg
+*.dbmdl
+*.jfm

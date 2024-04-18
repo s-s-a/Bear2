@@ -29,16 +29,16 @@
 *: Piva BEAR v.200 format 23.04.2006 16:06:45
 *:********************************************************************
 *
-* Новый Bear
-* Использует движок Beautify для преобразования текста и затем уже приглаживает по-моему
-* может работать просто вместо Beautify.APP
-* см. Опции OptionXXXXXXXX
+* РќРѕРІС‹Р№ Bear
+* РСЃРїРѕР»СЊР·СѓРµС‚ РґРІРёР¶РѕРє Beautify РґР»СЏ РїСЂРµРѕР±СЂР°Р·РѕРІР°РЅРёСЏ С‚РµРєСЃС‚Р° Рё Р·Р°С‚РµРј СѓР¶Рµ РїСЂРёРіР»Р°Р¶РёРІР°РµС‚ РїРѕ-РјРѕРµРјСѓ
+* РјРѕР¶РµС‚ СЂР°Р±РѕС‚Р°С‚СЊ РїСЂРѕСЃС‚Рѕ РІРјРµСЃС‚Рѕ Beautify.APP
+* СЃРј. РћРїС†РёРё OptionXXXXXXXX
 *
-* Пирожков В.В. 2006, piva@acmetelecom.ru
-* 13:00, суббота, 18 марта 2006 г.
-* Некоторые изменения и дополнения, доработка до 9-ки
-* Сизов С.А., sergsizov@gmail.com
-* 17:45, вторник, 11 июля 2006 г.
+* РџРёСЂРѕР¶РєРѕРІ Р’.Р’. 2006, piva@acmetelecom.ru
+* 13:00, СЃСѓР±Р±РѕС‚Р°, 18 РјР°СЂС‚Р° 2006 Рі.
+* РќРµРєРѕС‚РѕСЂС‹Рµ РёР·РјРµРЅРµРЅРёСЏ Рё РґРѕРїРѕР»РЅРµРЅРёСЏ, РґРѕСЂР°Р±РѕС‚РєР° РґРѕ 9-РєРё
+* РЎРёР·РѕРІ РЎ.Рђ., sergsizov@gmail.com
+* 17:45, РІС‚РѕСЂРЅРёРє, 11 РёСЋР»СЏ 2006 Рі.
 
 #Define CR					Chr(13)
 #Define LF				  Chr(10)												&& ssa &&
@@ -56,13 +56,13 @@
 #Define ENV_TABWIDTH	21
 #Define ENV_KIND		25
 
-#Define MAX_INSERT 2^19												&& ssa && максимальный размер куска текста для вставки 
-																							&& в окно редактора
+#Define MAX_INSERT 2^19												&& ssa && РјР°РєСЃРёРјР°Р»СЊРЅС‹Р№ СЂР°Р·РјРµСЂ РєСѓСЃРєР° С‚РµРєСЃС‚Р° РґР»СЏ РІСЃС‚Р°РІРєРё 
+																							&& РІ РѕРєРЅРѕ СЂРµРґР°РєС‚РѕСЂР°
 
 #Define c_Message	.T.
 #Define CONTENTS	.F.
 
-*ssa*	 для версий ниже 8 раскомментировать лежащие ниже две строки
+*ssa*	 РґР»СЏ РІРµСЂСЃРёР№ РЅРёР¶Рµ 8 СЂР°СЃРєРѕРјРјРµРЅС‚РёСЂРѕРІР°С‚СЊ Р»РµР¶Р°С‰РёРµ РЅРёР¶Рµ РґРІРµ СЃС‚СЂРѕРєРё
 *ssa*	#Define GetWordNum WordNum
 *ssa*	#Define GetWordCount Words
 
@@ -98,54 +98,54 @@ Endif
 Define Class Bear As Session
 	Version = "v.250"
 	Title = 'Bear 2'
-	FoxTools = ""																			&& Файл FoxTools.FLL
-	Keywords = ""																			&& Файл FDKeyWrd
-	FD3FLL = ""																				&& Файл FD3.FLL
+	FoxTools = ""																			&& Р¤Р°Р№Р» FoxTools.FLL
+	Keywords = ""																			&& Р¤Р°Р№Р» FDKeyWrd
+	FD3FLL = ""																				&& Р¤Р°Р№Р» FD3.FLL
 	
-	DetachFoxTools = .T.															&& Отключать FoxTools после работы
+	DetachFoxTools = .T.															&& РћС‚РєР»СЋС‡Р°С‚СЊ FoxTools РїРѕСЃР»Рµ СЂР°Р±РѕС‚С‹
 	
-	TabWidth = 4																			&& Размер табуляции
-	TabStop = 50																			&& Колонка, по которой выравнивать строковый комментарий
+	TabWidth = 4																			&& Р Р°Р·РјРµСЂ С‚Р°Р±СѓР»СЏС†РёРё
+	TabStop = 50																			&& РљРѕР»РѕРЅРєР°, РїРѕ РєРѕС‚РѕСЂРѕР№ РІС‹СЂР°РІРЅРёРІР°С‚СЊ СЃС‚СЂРѕРєРѕРІС‹Р№ РєРѕРјРјРµРЅС‚Р°СЂРёР№
 	
-	FileName = ""																			&& Имя причесываемого файла
+	FileName = ""																			&& РРјСЏ РїСЂРёС‡РµСЃС‹РІР°РµРјРѕРіРѕ С„Р°Р№Р»Р°
 	
-	WHandle = 0																				&& Хэнл окна редактирования
-	Position = 0																			&& Текущия позиция в редакторе
-	FileSize = 0																			&& Размер файла
-	SelStart = 0																			&& Позиция выделения
+	WHandle = 0																				&& РҐСЌРЅР» РѕРєРЅР° СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёСЏ
+	Position = 0																			&& РўРµРєСѓС‰РёСЏ РїРѕР·РёС†РёСЏ РІ СЂРµРґР°РєС‚РѕСЂРµ
+	FileSize = 0																			&& Р Р°Р·РјРµСЂ С„Р°Р№Р»Р°
+	SelStart = 0																			&& РџРѕР·РёС†РёСЏ РІС‹РґРµР»РµРЅРёСЏ
 	SelEnd = 0
-	Kind = 0																					&& Тип открытого окна - рекдатор или Snippet
+	Kind = 0																					&& РўРёРї РѕС‚РєСЂС‹С‚РѕРіРѕ РѕРєРЅР° - СЂРµРєРґР°С‚РѕСЂ РёР»Рё Snippet
 	
-	LinesCount = 0																		&& Служебные переменные управления массивами
+	LinesCount = 0																		&& РЎР»СѓР¶РµР±РЅС‹Рµ РїРµСЂРµРјРµРЅРЅС‹Рµ СѓРїСЂР°РІР»РµРЅРёСЏ РјР°СЃСЃРёРІР°РјРё
 	HeadersCount = 0
 	
-	Source = ""																				&& Где храним формируемый текст
-	Header = ""																				&& Заголовок файла
+	Source = ""																				&& Р“РґРµ С…СЂР°РЅРёРј С„РѕСЂРјРёСЂСѓРµРјС‹Р№ С‚РµРєСЃС‚
+	Header = ""																				&& Р—Р°РіРѕР»РѕРІРѕРє С„Р°Р№Р»Р°
 	Footer = ""
 	
-	Level = 0																					&& Текущй уровен вложенности
-	NextLevel = 0																			&& Следующий
-	BaseLevel = 0																			&& Базовый (внутри классов)
-	CurrentClass = ""																	&& Имя текущего класса
-	IsComment = .F.																		&& Комментарий
+	Level = 0																					&& РўРµРєСѓС‰Р№ СѓСЂРѕРІРµРЅ РІР»РѕР¶РµРЅРЅРѕСЃС‚Рё
+	NextLevel = 0																			&& РЎР»РµРґСѓСЋС‰РёР№
+	BaseLevel = 0																			&& Р‘Р°Р·РѕРІС‹Р№ (РІРЅСѓС‚СЂРё РєР»Р°СЃСЃРѕРІ)
+	CurrentClass = ""																	&& РРјСЏ С‚РµРєСѓС‰РµРіРѕ РєР»Р°СЃСЃР°
+	IsComment = .F.																		&& РљРѕРјРјРµРЅС‚Р°СЂРёР№
 	
-	LineSize = 68																			&& Размер строки пробиваеомй звездами
+	LineSize = 68																			&& Р Р°Р·РјРµСЂ СЃС‚СЂРѕРєРё РїСЂРѕР±РёРІР°РµРѕРјР№ Р·РІРµР·РґР°РјРё
 	
-	BeautifyMode = .F.																&& Вызов из меню как Beautify.APP
-	options = ""																			&& Опции передаваемые Beautify
-	InFile = ""																				&& входлящий файл для beautify
-	OutFile = ""																			&& Выходной файл
+	BeautifyMode = .F.																&& Р’С‹Р·РѕРІ РёР· РјРµРЅСЋ РєР°Рє Beautify.APP
+	options = ""																			&& РћРїС†РёРё РїРµСЂРµРґР°РІР°РµРјС‹Рµ Beautify
+	InFile = ""																				&& РІС…РѕРґР»СЏС‰РёР№ С„Р°Р№Р» РґР»СЏ beautify
+	OutFile = ""																			&& Р’С‹С…РѕРґРЅРѕР№ С„Р°Р№Р»
 	
-	UseBeautify = .T.																	&& Использовать Beautfy для простого вызова
-	FormatProcedures = .T.														&& Дописыает заголовки процедур и методов
-	FormatClasses = .T.																&& Дописываает закоголовка файлов
-	FormatFile = .T.																	&& Дописывает заголовок файла
+	UseBeautify = .T.																	&& РСЃРїРѕР»СЊР·РѕРІР°С‚СЊ Beautfy РґР»СЏ РїСЂРѕСЃС‚РѕРіРѕ РІС‹Р·РѕРІР°
+	FormatProcedures = .T.														&& Р”РѕРїРёСЃС‹Р°РµС‚ Р·Р°РіРѕР»РѕРІРєРё РїСЂРѕС†РµРґСѓСЂ Рё РјРµС‚РѕРґРѕРІ
+	FormatClasses = .T.																&& Р”РѕРїРёСЃС‹РІР°Р°РµС‚ Р·Р°РєРѕРіРѕР»РѕРІРєР° С„Р°Р№Р»РѕРІ
+	FormatFile = .T.																	&& Р”РѕРїРёСЃС‹РІР°РµС‚ Р·Р°РіРѕР»РѕРІРѕРє С„Р°Р№Р»Р°
 	
-	MyIndent = .T.																		&& Моя (PiVa) система отступов
-	* - можно отключить - если использется только режим Beautify
+	MyIndent = .T.																		&& РњРѕСЏ (PiVa) СЃРёСЃС‚РµРјР° РѕС‚СЃС‚СѓРїРѕРІ
+	* - РјРѕР¶РЅРѕ РѕС‚РєР»СЋС‡РёС‚СЊ - РµСЃР»Рё РёСЃРїРѕР»СЊР·РµС‚СЃСЏ С‚РѕР»СЊРєРѕ СЂРµР¶РёРј Beautify
 	
-	* Опции Beautify.APP
-	* Используются для простого вызова
+	* РћРїС†РёРё Beautify.APP
+	* РСЃРїРѕР»СЊР·СѓСЋС‚СЃСЏ РґР»СЏ РїСЂРѕСЃС‚РѕРіРѕ РІС‹Р·РѕРІР°
 	
 	* 1 - UpperCase
 	* 2 - LowerCase
@@ -236,7 +236,7 @@ Define Class Bear As Session
 			.Kind = laFileInfo[ENV_KIND]
 			
 			If .Kind<1
-				Messagebox("Текущее окно не являтеся окном редактора FoxPro", 16, .Title)
+				Messagebox("РўРµРєСѓС‰РµРµ РѕРєРЅРѕ РЅРµ СЏРІР»СЏС‚РµСЃСЏ РѕРєРЅРѕРј СЂРµРґР°РєС‚РѕСЂР° FoxPro", 16, .Title)
 				Return .F.
 			Endif
 			
@@ -248,7 +248,7 @@ Define Class Bear As Session
 			.FileSize	= laFileInfo[ENV_SIZE]
 			.TabWidth	= laFileInfo[ENV_TABWIDTH]
 			
-			* Черт прошлый раз не допер как выдернуть весь текст сразу
+			* Р§РµСЂС‚ РїСЂРѕС€Р»С‹Р№ СЂР°Р· РЅРµ РґРѕРїРµСЂ РєР°Рє РІС‹РґРµСЂРЅСѓС‚СЊ РІРµСЃСЊ С‚РµРєСЃС‚ СЃСЂР°Р·Сѓ
 			lcSource = _EdGetStr(.WHandle, 0, .FileSize)
 		Else
 			If Not File(lcFileName)
@@ -294,8 +294,8 @@ Define Class Bear As Session
 				.Put()
 				Loop
 			Endif
-			lcStr = Alltrim(lcStr, Tab)				&& ssa  && если надо и пробелы убрать, то добавить третий параметр ' ' (то бишь пробел :) )
-			Alines(laWord, lcStr, 1+8, ' ')			&&WORD_BREAK может глянуть в эту сторону?
+			lcStr = Alltrim(lcStr, Tab)				&& ssa  && РµСЃР»Рё РЅР°РґРѕ Рё РїСЂРѕР±РµР»С‹ СѓР±СЂР°С‚СЊ, С‚Рѕ РґРѕР±Р°РІРёС‚СЊ С‚СЂРµС‚РёР№ РїР°СЂР°РјРµС‚СЂ ' ' (С‚Рѕ Р±РёС€СЊ РїСЂРѕР±РµР» :) )
+			Alines(laWord, lcStr, 1+8, ' ')			&&WORD_BREAK РјРѕР¶РµС‚ РіР»СЏРЅСѓС‚СЊ РІ СЌС‚Сѓ СЃС‚РѕСЂРѕРЅСѓ?
 			
 			If 	.FormatClasses ;
 				and .CheckWord(laWord[1],'DEFINE') ;
@@ -344,11 +344,11 @@ Define Class Bear As Session
 			Endif
 			
 			If Not .MyIndent
-				.Put(.aString[lnCount])				&& ssa && сразу видно, что при .MyIndent=.f. тестов не было :)
+				.Put(.aString[lnCount])				&& ssa && СЃСЂР°Р·Сѓ РІРёРґРЅРѕ, С‡С‚Рѕ РїСЂРё .MyIndent=.f. С‚РµСЃС‚РѕРІ РЅРµ Р±С‹Р»Рѕ :)
 				Loop
 			Endif
 			
-			* Коментарий или продолжения комментария
+			* РљРѕРјРµРЅС‚Р°СЂРёР№ РёР»Рё РїСЂРѕРґРѕР»Р¶РµРЅРёСЏ РєРѕРјРјРµРЅС‚Р°СЂРёСЏ
 			If .IsComment Or Left(laWord[1],1)='*' Or (Upper(laWord[1])="NOTE" And Len(laWord[1])=4)
 				.Put(lcStr)
 				.IsComment=Right(Getwordnum(lcStr,Getwordcount(lcStr,WORD_BREAK),WORD_BREAK),1)=";"
@@ -402,7 +402,7 @@ Define Class Bear As Session
 				or .CheckWord(laWord[1],'ENDWITH') ;
 				or .CheckWord(laWord[1],'NEXT') ;
 				or .CheckWord(laWord[1],'#ENDIF') ;
-				or .CheckWord(laWord[1],'ENDSCAN')	&& ssa && + просто забытая строка :)
+				or .CheckWord(laWord[1],'ENDSCAN')	&& ssa && + РїСЂРѕСЃС‚Рѕ Р·Р°Р±С‹С‚Р°СЏ СЃС‚СЂРѕРєР° :)
 				
 				.Level=.Level-1
 				.NextLevel=.NextLevel-1
@@ -493,26 +493,26 @@ Define Class Bear As Session
 			Return .T.
 		Endif
 		
-		* Было откыто окно редактора
+		* Р‘С‹Р»Рѕ РѕС‚РєС‹С‚Рѕ РѕРєРЅРѕ СЂРµРґР°РєС‚РѕСЂР°
 		If Not Empty(.WHandle)
-			_EdUndoOn(.WHandle,.T.)											&& Включиди режим UNDO для 1 изменеия теска
-			_EdSelect(.WHandle,0,.FileSize)							&& Выбрали весть текст
-			_EdDelete(.WHandle)													&& Все удалили
-*ssa*	  при обработке больших файлов вылезло ограничение на размер вставляемого блока.
-*ssa*	  пришлось лепить вставку частями
+			_EdUndoOn(.WHandle,.T.)											&& Р’РєР»СЋС‡РёРґРё СЂРµР¶РёРј UNDO РґР»СЏ 1 РёР·РјРµРЅРµРёСЏ С‚РµСЃРєР°
+			_EdSelect(.WHandle,0,.FileSize)							&& Р’С‹Р±СЂР°Р»Рё РІРµСЃС‚СЊ С‚РµРєСЃС‚
+			_EdDelete(.WHandle)													&& Р’СЃРµ СѓРґР°Р»РёР»Рё
+*ssa*	  РїСЂРё РѕР±СЂР°Р±РѕС‚РєРµ Р±РѕР»СЊС€РёС… С„Р°Р№Р»РѕРІ РІС‹Р»РµР·Р»Рѕ РѕРіСЂР°РЅРёС‡РµРЅРёРµ РЅР° СЂР°Р·РјРµСЂ РІСЃС‚Р°РІР»СЏРµРјРѕРіРѕ Р±Р»РѕРєР°.
+*ssa*	  РїСЂРёС€Р»РѕСЃСЊ Р»РµРїРёС‚СЊ РІСЃС‚Р°РІРєСѓ С‡Р°СЃС‚СЏРјРё
 			If Len(.Source) > MAX_INSERT
 				For i=1 to Int(Len(.Source)/MAX_INSERT)
 					_EdInsert(.WHandle, Substr(.Source, (i-1)*MAX_INSERT+1, MAX_INSERT), MAX_INSERT)
 				Next
 				_EdInsert(.WHandle,Right(.Source,Len(.Source)%MAX_INSERT), Len(.Source)%MAX_INSERT)
 			Else 
-				_EdInsert(.WHandle,.Source,Len(.Source))		&& Вставили отформатированыый текст
+				_EdInsert(.WHandle,.Source,Len(.Source))		&& Р’СЃС‚Р°РІРёР»Рё РѕС‚С„РѕСЂРјР°С‚РёСЂРѕРІР°РЅС‹С‹Р№ С‚РµРєСЃС‚
 			EndIf
-			_EdUndoOn(.WHandle,.F.)											&& Выключили UNDO
-			_EdSetPos(.WHandle,.Position)								&& Встали на позицию
-			_EdStoPos(.WHandle,.Position,.T.)						&& Передвинули указатель на эту позицию
+			_EdUndoOn(.WHandle,.F.)											&& Р’С‹РєР»СЋС‡РёР»Рё UNDO
+			_EdSetPos(.WHandle,.Position)								&& Р’СЃС‚Р°Р»Рё РЅР° РїРѕР·РёС†РёСЋ
+			_EdStoPos(.WHandle,.Position,.T.)						&& РџРµСЂРµРґРІРёРЅСѓР»Рё СѓРєР°Р·Р°С‚РµР»СЊ РЅР° СЌС‚Сѓ РїРѕР·РёС†РёСЋ
 		Else
-			* Если передавали имя файла - то его и переписываем
+			* Р•СЃР»Рё РїРµСЂРµРґР°РІР°Р»Рё РёРјСЏ С„Р°Р№Р»Р° - С‚Рѕ РµРіРѕ Рё РїРµСЂРµРїРёСЃС‹РІР°РµРј
 			Strtofile(.Source, .FileName, 0)
 		Endif
 	Endwith
@@ -621,12 +621,12 @@ Define Class Bear As Session
 	*:********************************************************************
 	Procedure InLine(lcStr)
 	With This
-		* Если комментарий уже вставлен
-		If INLINE_COMMENT $ lcStr										&& ssa  && ? наверху есть #Define INLINE_COMMENT		Chr(38)+Chr(38)
+		* Р•СЃР»Рё РєРѕРјРјРµРЅС‚Р°СЂРёР№ СѓР¶Рµ РІСЃС‚Р°РІР»РµРЅ
+		If INLINE_COMMENT $ lcStr										&& ssa  && ? РЅР°РІРµСЂС…Сѓ РµСЃС‚СЊ #Define INLINE_COMMENT		Chr(38)+Chr(38)
 			Local lnCommentPos, lcSuffix
-			lnCommentPos = At(INLINE_COMMENT, lcStr)				&& ssa &&  тем более, что здесь он вспомнился :)
+			lnCommentPos = At(INLINE_COMMENT, lcStr)				&& ssa &&  С‚РµРј Р±РѕР»РµРµ, С‡С‚Рѕ Р·РґРµСЃСЊ РѕРЅ РІСЃРїРѕРјРЅРёР»СЃСЏ :)
 			lcSuffix = .RightTrim(Substr(lcStr, lnCommentPos))
-			lcStr = .RightTrim(Left(lcStr, lnCommentPos-1))	&& ssa &&  Substr(lcStr,1,lnCommentPos-1)) на left()
+			lcStr = .RightTrim(Left(lcStr, lnCommentPos-1))	&& ssa &&  Substr(lcStr,1,lnCommentPos-1)) РЅР° left()
 			If Not Empty(lcSuffix)
 				lcStr = .AdjustString(lcStr)+lcSuffix
 			Endif
@@ -662,22 +662,22 @@ Define Class Bear As Session
 	*:
 	*:********************************************************************
 	Procedure AdjustString(m.cString)
-	* Выравнивание строки до позиции вставки комментария
+	* Р’С‹СЂР°РІРЅРёРІР°РЅРёРµ СЃС‚СЂРѕРєРё РґРѕ РїРѕР·РёС†РёРё РІСЃС‚Р°РІРєРё РєРѕРјРјРµРЅС‚Р°СЂРёСЏ
 *ssa*		Local i, m.pos
 *ssa*		m.pos = 0
 *ssa*		For i=1 To Len(m.cString)
 *ssa*			m.pos = Iif(Substr(m.cString,i,1)=Tab, Int((m.pos-1+.TabWidth)/.TabWidth)*.TabWidth+1, m.pos + 1)
 *ssa*		Next
 *ssa*		If m.pos < .TabStop
-*ssa*			* Добить строку табуляцией
+*ssa*			* Р”РѕР±РёС‚СЊ СЃС‚СЂРѕРєСѓ С‚Р°Р±СѓР»СЏС†РёРµР№
 *ssa*			i = Len(m.cString)
 *ssa*			Do While m.pos < .TabStop-.TabWidth
 *ssa*				m.cString = m.cString+Tab
-*ssa*				* Вот нафига нужен -1 я так и не понял :))
+*ssa*				* Р’РѕС‚ РЅР°С„РёРіР° РЅСѓР¶РµРЅ -1 СЏ С‚Р°Рє Рё РЅРµ РїРѕРЅСЏР» :))
 *ssa*				m.pos = (Int((m.pos-1+.TabWidth)/.TabWidth)*.TabWidth)+1
 *ssa*			Enddo
 *ssa*		Else
-*ssa*			* Добавить 1 табуляцию
+*ssa*			* Р”РѕР±Р°РІРёС‚СЊ 1 С‚Р°Р±СѓР»СЏС†РёСЋ
 *ssa*			m.cString = m.cString+Tab
 *ssa*		Endif
 *ssa*		Return m.cString
@@ -690,7 +690,7 @@ Define Class Bear As Session
 	*:
 	*:********************************************************************
 	Procedure Beautify(m.source)
-	* Код системного Beautify
+	* РљРѕРґ СЃРёСЃС‚РµРјРЅРѕРіРѕ Beautify
 	With This
 		m.Keywords = .FindFile("FDKEYWRD.DBF")
 		m.FD3FLL = .FindFile("FD3.FLL")
@@ -743,7 +743,7 @@ Define Class Bear As Session
 	*:
 	*:********************************************************************
 	Procedure MakeOptions
-	* Создание опций из Настроек проги
+	* РЎРѕР·РґР°РЅРёРµ РѕРїС†РёР№ РёР· РќР°СЃС‚СЂРѕРµРє РїСЂРѕРіРё
 	With This
 		If .BeautifyMode
 			Return .options
